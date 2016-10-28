@@ -84,6 +84,19 @@ def conv2d(input_, output_dim,
 
         return conv
 
+def conv3d(input_, output_dim,
+           k_t=4, k_h=4, k_w=4, d_t=2, d_h=2, d_w=2, pad_t=1, pad_h=1, pad_w=1, stddev=0.01,
+           name="conv3d"):
+    with tf.variable_scope(name):
+        w = tf.get_variable('w', [k_t, k_h, k_w, input_.get_shape()[-1], output_dim],
+                            initializer=tf.truncated_normal_initializer(stddev=stddev))
+        conv = tf.nn.conv3d(input_, w, strides=[1, d_t, d_h, d_w, 1], padding=[1, pad_t, pad_h, pad_w, 1])
+
+        biases = tf.get_variable('biases', [output_dim], initializer=tf.constant_initializer(0.0))
+        conv = tf.reshape(tf.nn.bias_add(conv, biases), conv.get_shape())
+
+        return conv
+
 def deconv2d(input_, output_shape,
              k_h=4, k_w=4, d_h=2, d_w=2, pad_h=1, pad_w=1, stddev=0.01,
              name="deconv2d", with_w=False):
@@ -122,6 +135,9 @@ def deconv3d(input_, output_shape,
         else:
             return deconv
 
+def l1Penalty(x, scale=0.1, name="L1Penalty"):
+    l1P = tf.contrib.layers.l1_regularizer(scale)
+    return L1P(x)
 
 def lrelu(x, leak=0.2, name="lrelu"):
   return tf.maximum(x, leak*x)

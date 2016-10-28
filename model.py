@@ -71,15 +71,43 @@ class VideoGAN(object):
             [self.batch_size, 4, 8, 8, 256], name='gf_h1', with_w=True)
         h1 = tf.nn.relu(self.gf_bn1(self.h1))
 
-        h2, self.h2_w, self.h2_b = deconv2d(h1,
+        h2, self.h2_w, self.h2_b = deconv3d(h1,
             [self.batch_size, 8, 16, 16, 128], name='gf_h2', with_w=True)
         h2 = tf.nn.relu(self.gf_bn2(h2))
 
-        h3, self.h3_w, self.h3_b = deconv2d(h2,
+        h3, self.h3_w, self.h3_b = deconv3d(h2,
             [self.batch_size, 16, 32, 32, 64], name='gf_h3', with_w=True)
         h3 = tf.nn.relu(self.gf_bn3(h3))
 
-        h4, self.h4_w, self.h4_b = deconv2d(h3,
+        h4, self.h4_w, self.h4_b = deconv3d(h3,
             [self.batch_size, 32, 64, 64, 3], name='gb_h4', with_w=True)
 
-        return tf.nn.tanh(h4)
+        mask1 = deconv3d(h3,
+            [self.batch_size, 32, 64, 64, 1], name='mask1', with_w=False)
+
+        mask = L1Penalty(tf.nn.sigmoid(mask1))
+
+        # mask*h4 + (1 - mask)*
+
+        return tf.nn.tanh(h4), mask
+
+    def generator(self, z):
+
+        gf4, mask = self.g_foreground(z)
+
+        gb4 = self.g_background(z)
+
+        gb4 = tf.reshape(gb4, [self.batch_size, 1, 64, 64, 3])
+        gb4 = tf.tile(gb4, [1, 32, 1, 1, 1])
+
+        return mask * gf4 + (1 - mask) * gb4
+
+    def descriminator(self, z):
+
+        h0 = lrelu(conv3d(image, 64, name='d_h0_conv'))
+        h1 = lrelu(self.d_bn1(conv3d(h0, 128, name='d_h1_conv')))
+        h2 = lrelu(self.d_bn2(conv3d(h1, 256, name='d_h2_conv')))
+        h3 = lrelu(self.d_bn3(conv3d(h2, 512, name='d_h3_conv')))
+        h4 = linear(tf.reshape(h3, [self.batch_size, -1]), 1, 'd_h3_lin')
+
+        return h4
