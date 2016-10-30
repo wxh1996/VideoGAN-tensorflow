@@ -11,7 +11,7 @@ from utils import *
 
 class VideoGAN(object):
 
-    def __init__(self, sess, image_size=128, batch_size=64, framesize=32, cropsize=64):
+    def __init__(self, sess, image_size=128, batch_size=64, frame_size=32, crop_size=64):
         self.sess = sess
         self.batch_size = batch_size
         self.image_size = image_size
@@ -102,12 +102,27 @@ class VideoGAN(object):
 
         return mask * gf4 + (1 - mask) * gb4
 
-    def descriminator(self, z):
+    def descriminator(self, video):
 
-        h0 = lrelu(conv3d(image, 64, name='d_h0_conv'))
+        h0 = lrelu(conv3d(video, 64, name='d_h0_conv'))
         h1 = lrelu(self.d_bn1(conv3d(h0, 128, name='d_h1_conv')))
         h2 = lrelu(self.d_bn2(conv3d(h1, 256, name='d_h2_conv')))
         h3 = lrelu(self.d_bn3(conv3d(h2, 512, name='d_h3_conv')))
         h4 = linear(tf.reshape(h3, [self.batch_size, -1]), 1, 'd_h3_lin')
 
         return h4
+
+    # def loss_function(self, z):
+    def build_model(self):
+
+        self.videos = tf.placeholder(tf.float32, [None, self.frame_size, self.crop_size, self.crop_size, self.c_dim],
+                                    name='real_v')
+        self.z =  tf.placeholder(tf.float32, [None, self.z_dim],
+                                name='z')
+        self.fake = self.generator(self.z)
+
+        self.predict1 = self.discriminator(self.videos)
+        self.lossf1 = (predict1, label)
+
+        self.predict2 = self.discriminator(self.fake)
+        self.lossf2 = ()
