@@ -110,19 +110,76 @@ class VideoGAN(object):
         h3 = lrelu(self.d_bn3(conv3d(h2, 512, name='d_h3_conv')))
         h4 = linear(tf.reshape(h3, [self.batch_size, -1]), 1, 'd_h3_lin')
 
-        return h4
+        return tf.nn.sigmoid(h4), h4
 
     # def loss_function(self, z):
     def build_model(self):
 
         self.videos = tf.placeholder(tf.float32, [None, self.frame_size, self.crop_size, self.crop_size, self.c_dim],
-                                    name='real_v')
+                                    name='videos')
         self.z =  tf.placeholder(tf.float32, [None, self.z_dim],
                                 name='z')
-        self.fake = self.generator(self.z)
+        self.G = self.generator(self.z)
 
-        self.predict1 = self.discriminator(self.videos)
-        self.lossf1 = (predict1, label)
+        self.D, self.D_logits = self.discriminator(self.videos)
+        self.d_loss_real =  tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(self.D_logits, tf.ones_like(self.D)))
 
-        self.predict2 = self.discriminator(self.fake)
-        self.lossf2 = ()
+        self.D_, self.D_logits_ = self.discriminator(self.G)
+        self.d_loss_fake =  tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(self.D_logits_, tf.zeros_like(self.D_)))
+
+        self.d_sum = tf.histogram_summary("d", self.D)
+        self.d__sum = tf.histogram_summary("d_", self.D_)
+        self.G_sum = tf.image_summary("G", self.G)
+
+        self.g_loss = tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(self.D_logits_, tf.ones_like(self.D_)))
+
+        self.d_loss_real_sum = tf.scalar_summary("d_loss_real", self.d_loss_real)
+        self.d_loss_fake_sum = tf.scalar_summary("d_loss_fake", self.d_loss_fake)
+
+        self.d_loss = self.d_loss_real + self.d_loss_fake
+
+        self.g_loss_sum = tf.scalar_summary("g_loss", self.g_loss)
+        self.d_loss_sum = tf.scalar_summary("d_loss", self.d_loss)
+
+        t_vars = tf.trainable_variables()
+
+        self.d_vars = [var for var in t_vars if 'd_' in var.name]
+        self.g_vars = [var for var in t_vars if 'g_' in var.name]
+
+        self.saver = tf.train.Saver()
+
+    def train(self, config):
+
+        d_optim = tf.train.AdamOptimizer(config.learning_rate, beta1=config.beta1) \
+                          .minimize(self.d_loss, var_list=self.d_vars)
+        g_optim = tf.train.AdamOptimizer(config.learning_rate, beta1=config.beta1) \
+                          .minimize(self.g_loss, var_list=self.g_vars)
+        tf.initialize_all_variables().run()
+
+        self.g_sum = tf.merge_summary([self.z_sum, self.d__sum,
+            self.G_sum, self.d_loss_fake_sum, self.g_loss_sum])
+        self.d_sum = tf.merge_summary([self.z_sum, self.d_sum, self.d_loss_real_sum, self.d_loss_sum])
+        self.writer = tf.train.SummaryWriter("./logs", self.sess.graph)
+
+        sample_z = np.random.uniform(-1, 1, size=(self.crop_size , self.z_dim))
+
+        #DATA PREPARED
+        #.......
+
+        for epoch in xrange(config.epoch):
+            for idx in xrange(0, batch_idxs):
+                _, summary_str = self.sess.run([d_optim, self.d_sum],
+                    feed_dict={ self.images: batch_images, self.z: batch_z, self.y:batch_labels })
+                self.writer.add_summary(summary_str, counter)
+
+                # Update G network
+                _, summary_str = self.sess.run([g_optim, self.g_sum],
+                    feed_dict={ self.z: batch_z, self.y:batch_labels })
+                self.writer.add_summary(summary_str, counter)
+
+                errD_fake = self.d_loss_fake.eval({self.z: batch_z, self.y:batch_labels})
+                errD_real = self.d_loss_real.eval({self.images: batch_images, self.y:batch_labels})
+                errG = self.g_loss.eval({self.z: batch_z, self.y:batch_labels})
+            print("Epoch: [%2d] [%4d/%4d] time: %4.4f, d_loss: %.8f, g_loss: %.8f" \
+                % (epoch, idx, batch_idxs,
+                    time.time() - start_time, errD_fake+errD_real, errG))

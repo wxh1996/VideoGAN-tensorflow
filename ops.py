@@ -62,7 +62,7 @@ def binary_cross_entropy(preds, targets, name=None):
     with ops.op_scope([preds, targets], name, "bce_loss") as name:
         preds = ops.convert_to_tensor(preds, name="preds")
         targets = ops.convert_to_tensor(targets, name="targets")
-        return tf.reduce_mean(-(targets * tf.log(preds + eps) +
+        return tf.reduce_mean(-(targets * tf.log(preds + eps) + 
                               (1. - targets) * tf.log(1. - preds + eps)))
 
 def conv_cond_concat(x, y):
