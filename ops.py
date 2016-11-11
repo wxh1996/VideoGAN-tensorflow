@@ -90,7 +90,7 @@ def conv3d(input_, output_dim,
     with tf.variable_scope(name):
         w = tf.get_variable('w', [k_t, k_h, k_w, input_.get_shape()[-1], output_dim],
                             initializer=tf.truncated_normal_initializer(stddev=stddev))
-        conv = tf.nn.conv3d(input_, w, strides=[1, d_t, d_h, d_w, 1], padding=[1, pad_t, pad_h, pad_w, 1])
+        conv = tf.nn.conv3d(input_, w, strides=[1, d_t, d_h, d_w, 1], padding='SAME')
 
         biases = tf.get_variable('biases', [output_dim], initializer=tf.constant_initializer(0.0))
         conv = tf.reshape(tf.nn.bias_add(conv, biases), conv.get_shape())
@@ -106,7 +106,7 @@ def deconv2d(input_, output_shape,
                             initializer=tf.random_normal_initializer(stddev=stddev))
 
         deconv = tf.nn.conv2d_transpose(input_, w, output_shape=output_shape,
-                                strides=[1, d_h, d_w, 1], padding=[1, pad_h, pad_w, 1])
+                                strides=[1, d_h, d_w, 1], padding='SAME')
 
         biases = tf.get_variable('biases', [output_shape[-1]], initializer=tf.constant_initializer(0.0))
         deconv = tf.reshape(tf.nn.bias_add(deconv, biases), deconv.get_shape())
@@ -125,10 +125,10 @@ def deconv3d(input_, output_shape,
                             initializer=tf.random_normal_initializer(stddev=stddev))
 
         deconv = tf.nn.conv3d_transpose(input_, w, output_shape=output_shape,
-                                strides=[1, d_t, d_h, d_w, 1], padding=[1, pad_t, pad_h, pad_w, 1])
+                                strides=[1, d_t, d_h, d_w, 1], padding='SAME')
 
         biases = tf.get_variable('biases', [output_shape[-1]], initializer=tf.constant_initializer(0.0))
-        deconv = tf.reshape(tf.nn.bias_add(deconv, biases), deconv.get_shape())
+        deconv = tf.reshape(tf.nn.bias_add(deconv, biases), output_shape)
 
         if with_w:
             return deconv, w, biases
@@ -137,7 +137,7 @@ def deconv3d(input_, output_shape,
 
 def l1Penalty(x, scale=0.1, name="L1Penalty"):
     l1P = tf.contrib.layers.l1_regularizer(scale)
-    return L1P(x)
+    return l1P(x)
 
 def lrelu(x, leak=0.2, name="lrelu"):
   return tf.maximum(x, leak*x)
