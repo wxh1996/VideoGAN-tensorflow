@@ -8,7 +8,7 @@ from utils import *
 
 class batch_norm(object):
     """Code modification of http://stackoverflow.com/a/33950177"""
-    def __init__(self, epsilon=1e-5, momentum = 0.5, name="batch_norm"):
+    def __init__(self, epsilon=1e-5, momentum = 0.1, name="batch_norm"):
         with tf.variable_scope(name):
             self.epsilon = epsilon
             self.momentum = momentum
@@ -62,7 +62,7 @@ def binary_cross_entropy(preds, targets, name=None):
     with ops.op_scope([preds, targets], name, "bce_loss") as name:
         preds = ops.convert_to_tensor(preds, name="preds")
         targets = ops.convert_to_tensor(targets, name="targets")
-        return tf.reduce_mean(-(targets * tf.log(preds + eps) + 
+        return tf.reduce_mean(-(targets * tf.log(preds + eps) +
                               (1. - targets) * tf.log(1. - preds + eps)))
 
 def conv_cond_concat(x, y):
@@ -72,7 +72,7 @@ def conv_cond_concat(x, y):
     return tf.concat(3, [x, y*tf.ones([x_shapes[0], x_shapes[1], x_shapes[2], y_shapes[3]])])
 
 def conv2d(input_, output_dim,
-           k_h=5, k_w=5, d_h=2, d_w=2, stddev=0.02,
+           k_h=5, k_w=5, d_h=2, d_w=2, stddev=0.01,
            name="conv2d"):
     with tf.variable_scope(name):
         w = tf.get_variable('w', [k_h, k_w, input_.get_shape()[-1], output_dim],
