@@ -12,6 +12,7 @@ class VideoGAN(object):
 
     def __init__(self, sess, image_size=128, batch_size=64, frame_size=32, crop_size=64,
                 learning_rate=0.0002, beta1=0.5, z_dim=100):
+        self.checkpoint_dir = '/output'
         self.sess = sess
         self.batch_size = batch_size
         self.image_size = image_size
@@ -36,7 +37,7 @@ class VideoGAN(object):
         self.gf_bn1 = batch_norm(name='g_f_bn1')
         self.gf_bn2 = batch_norm(name='g_f_bn2')
         self.gf_bn3 = batch_norm(name='g_f_bn3')
-        # self.dataset_name = dataset_name
+        self.dataset_name = 'Golf'
         # self.checkpoint_dir = checkpoint_dir
         self.build_model()
 
@@ -118,6 +119,19 @@ class VideoGAN(object):
         return tf.nn.sigmoid(h4), h4
 
     # def loss_function(self, z):
+
+    def save(self, checkpoint_dir, step):
+        model_name = "VideoGAN.model"
+        model_dir = "%s_%s" % (self.dataset_name, self.batch_size)
+        checkpoint_dir = os.path.join(checkpoint_dir, model_dir)
+
+        if not os.path.exists(checkpoint_dir):
+            os.makedirs(checkpoint_dir)
+
+        self.saver.save(self.sess,
+                        os.path.join(checkpoint_dir, model_name),
+                        global_step=step)
+
     def build_model(self):
 
         self.videos = tf.placeholder(tf.float32, [self.batch_size, self.frame_size, self.crop_size, self.crop_size, 3],
@@ -201,6 +215,9 @@ class VideoGAN(object):
                 print("Epoch: [%2d] [%4d/%4d] time: %4.4f, d_loss: %.8f, g_loss: %.8f" \
                  % (epoch, idx, batch_idxs,
                     time.time() - start_time, errD_fake+errD_real, errG))
+
+                if np.mod(counter, 500) == 2:
+                    self.save(config.checkpoint_dir, counter)
 
 if __name__ == "__main__":
     sess = tf.Session()
