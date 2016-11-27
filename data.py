@@ -15,6 +15,7 @@ class DataLoader(object):
         print 'reading data list...'
         with open(self.data_list_path, 'r') as f:
             self.video_index = [x.strip() for x in f.readlines()]
+            np.random.shuffle(self.video_index)
         self.size = len(self.video_index)
         self.cursor = 0
 
@@ -22,6 +23,7 @@ class DataLoader(object):
 
         if self.cursor +self.batch_size > self.size:
             self.cursor = 0
+            np.random.shuffle(self.video_index)
         out = np.zeros((self.batch_size, self.frame_size, self.crop_size, self.crop_size, 3))
         # tinyvideo = np.zeros((self.frame_size, self.crop_size, self.crop_size, 3))
         for idx in xrange(self.batch_size):
