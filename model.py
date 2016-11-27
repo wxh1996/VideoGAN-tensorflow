@@ -205,9 +205,6 @@ class VideoGAN(object):
         for epoch in xrange(50):
 
             batch_idxs = data_size // self.batch_size
-            # batch_videos = dataloader.get_batch()
-            # batch_z = np.random.uniform(-1, 1, [self.batch_size, self.z_dim]) \
-            #             .astype(np.float32)
 
             for idx in xrange(0, batch_idxs):
 
